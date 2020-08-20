@@ -1,3 +1,6 @@
+import random
+import string
+import timeit
 from sys import stdin
 
 
@@ -67,7 +70,10 @@ class SplayTree:
 
     def __repr__(self):
         return "{}<root: {}, size: {}>".format(
-            self.__class__.__name__, str(self._root), self.__len__())
+            self.__class__.__name__, repr(self._root), self.__len__())
+
+    def __str__(self):
+        return "{}({})".format(self.__class__.__name__, repr(self._root))
 
     @classmethod
     def _from_root(cls, root):
@@ -87,7 +93,8 @@ class SplayTree:
         # Notice:
         # The method is in this class and not in class Node
         # because SplayTree affects the attributes of Node instances
-        # by changing deep children in their subtrees, not only direct children.
+        # by changing deep children in their subtrees, not only direct
+        # children.
         # Also class Node is somewhat data class.
         for node in nodes:
             if node is None:
@@ -416,13 +423,15 @@ class SplayTree:
             return
         visited = set()
         while True:
-            if cur.left is not None and cur.left not in visited and cur is not start_node:
+            if (cur.left is not None and cur.left not in visited and
+                    cur is not start_node):
                 cur = cur.left
             else:
                 if cur not in visited:
                     yield cur
                     visited.add(cur)
-                if cur.right is not None and cur.right not in visited and cur is not end_node:
+                if (cur.right is not None and cur.right not in visited and
+                        cur is not end_node):
                     cur = cur.right
                 elif cur.parent is not None:
                     visited.discard(cur.left)
@@ -433,19 +442,22 @@ class SplayTree:
                 else:
                     return
 
-    def _reversed_in_order_iter(self, start_node=None, end_node=None, root_node=None):
+    def _reversed_in_order_iter(
+            self, start_node=None, end_node=None, root_node=None):
         cur = root_node if root_node is not None else self._root
         if cur is None:
             return
         visited = set()
         while True:
-            if cur.right is not None and cur.right not in visited and cur is not start_node:
+            if (cur.right is not None and cur.right not in visited and
+                    cur is not start_node):
                 cur = cur.right
             else:
                 if cur not in visited:
                     yield cur
                     visited.add(cur)
-                if cur.left is not None and cur.left not in visited and cur is not end_node:
+                if (cur.left is not None and cur.left not in visited and
+                        cur is not end_node):
                     cur = cur.left
                 elif cur.parent is not None:
                     visited.discard(cur.right)
@@ -570,7 +582,7 @@ class SplayTree:
             if key.step == 0:
                 raise ValueError("slice step cannot be zero")
             try:
-                it = iter(value)
+                val_it = iter(value)
             except TypeError:
                 if key.step is None or key.step == 1:
                     msg = "can only assign an iterable"
@@ -581,9 +593,9 @@ class SplayTree:
             # Case when self is empty:
             if self._root is None:
                 if key.step is None or key.step == 1:
-                    self._root = self.__class__(it)._root
+                    self._root = self.__class__(val_it)._root
                     return
-                vals = list(it)
+                vals = list(val_it)
                 if vals:
                     raise ValueError(
                         f"attempt to assign sequence of size {len(vals)}"
@@ -608,7 +620,7 @@ class SplayTree:
 
             # Case when simple replaceable slice:
             if step == 1:
-                result = self.__class__(it)._root
+                result = self.__class__(val_it)._root
                 temp = self._merge(result, right)
                 self._root = self._merge(left, temp)
                 return
@@ -618,12 +630,13 @@ class SplayTree:
             req_size = requested.size if requested is not None else 0
             slice_len = (req_size // step_pos +
                          (1 if req_size % step_pos != 0 else 0))
-            vals = list(it)
+            vals = list(val_it)
             if step != 1 and slice_len != len(vals):
                 temp = self._merge(requested, right)
                 self._root = self._merge(left, temp)
                 raise ValueError(
-                    f"attempt to assign sequence of size {len(vals)} to extended slice of size {slice_len}")
+                    f"attempt to assign sequence of size {len(vals)}"
+                    " to extended slice of size {slice_len}")
             source = self._from_root(requested)
             node_it = (source._in_order_iter() if step > 0
                        else source._reversed_in_order_iter())
@@ -662,9 +675,9 @@ class SplayTree:
         requested, right = self._split(temp, len_)
         return left, requested, right
 
-    def slices_substitution(self, source_start, source_stop, dest_start, dest_stop):
+    def slices_substitution(self, src_start, src_stop, dest_start, dest_stop):
         left, source, right = self._split_into_three_subtrees(
-            slice(source_start, source_stop, 1))
+            slice(src_start, src_stop, 1))
         self._root = self._merge(left, right)
         req_size = source.size if source is not None else 0
         dest_start_changed = dest_start - req_size
@@ -753,13 +766,7 @@ def test():
 
 
 def time_test(number=1, query_number=10 ** 5, tree_size=3 * 10 ** 5):
-    import string
-    import gc
-    import random
-    import sys
-    import timeit
-
-    def prepare():
+    def prepare():  # pylint: disable=possibly-unused-variable
         values = [random.choice(string.ascii_lowercase)
                   for _ in range(tree_size)]
         queries = []
@@ -772,13 +779,11 @@ def time_test(number=1, query_number=10 ** 5, tree_size=3 * 10 ** 5):
 
     print(
         timeit.timeit(
-            stmt="gc.enable(); make_queries(*prepare())",
+            stmt="import gc; gc.enable(); make_queries(*prepare())",
             globals={**globals(), **locals()}, number=number) / number)
 
 
 def test_merge(tree1_values, tree2_values):
-    tree1_values = tree1_values
-    tree2_values = tree2_values
     united_tree_values = tree1_values + tree2_values
     tree1 = SplayTree(tree1_values)
     assert check_whether_tree_is_correct(tree1)
@@ -791,7 +796,6 @@ def test_merge(tree1_values, tree2_values):
 
 
 def merge_random_test(how_many=1000):
-    import random
     cases = [
         (10**2, 10**2, 0, 10*3, 10**5),
         (10**2, 10**2, 0, 10*3, 10**5),
@@ -804,21 +808,26 @@ def merge_random_test(how_many=1000):
     ]
     for i, case in enumerate(cases, 1):
         for j in range(1, how_many + 1):
-            tree1_num_amount, tree2_num_amount, tree1_min_num, tree1_max_num, tree2_max_num = case
-            tree1_values = list(random.randint(tree1_min_num, tree1_max_num)
-                                for _ in range(tree1_num_amount))
-            tree2_values = list(random.randint(
-                tree1_max_num + 1, tree2_max_num) for _ in range(tree2_num_amount))
-            test_merge(tree1_values, tree2_values)
+            (
+                tree1_num_amount, tree2_num_amount,
+                tree1_min_num, tree1_max_num, tree2_max_num
+            ) = case
+            tree1_vals = list(random.randint(tree1_min_num, tree1_max_num)
+                              for _ in range(tree1_num_amount))
+            tree2_vals = list(random.randint(tree1_max_num + 1, tree2_max_num)
+                              for _ in range(tree2_num_amount))
+            test_merge(tree1_vals, tree2_vals)
             padding1, padding2 = len(str(how_many)), len(str(len(cases)))
-            print(
-                f"merge random test {j:{padding1}}/{how_many} for case {i:{padding2}}/{len(cases)} finished.", end='\r')
+            print(f"merge random test {j:{padding1}}/{how_many} "
+                  f"for case {i:{padding2}}/{len(cases)} finished.", end='\r')
     print()
 
 
 def merge_test_with_cases():
     cases = [
-        ([0, 1, 2, 3, 4], [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]),
+        (
+            [0, 1, 2, 3, 4],
+            [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]),
         ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13, 14]),
         ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
           13, 14, 15, 16], [17, 18, 19, 20, 21]),
@@ -827,15 +836,27 @@ def merge_test_with_cases():
         ([], [0]),
         ([0], [1]),
         ([0], [1]),
-        ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30], [1411, 1441, 1486, 2212, 2560, 4193, 7503, 8101, 8229, 9214, 10837, 11263, 12618, 13012, 13417, 15380, 15694, 16239, 16685, 17332, 17783, 18162, 18321, 19806, 20904, 23205, 23384, 24325, 25926, 26154, 29558, 29702, 31679, 31816, 34532, 39083, 40372, 40579, 40970, 41147, 41908, 42361, 43701,
-                                                                                                                           44522, 48832, 50990, 52280, 53432, 53946, 54420, 54634, 55716, 56380, 57140, 58230, 58569, 59767, 60610, 61440, 61654, 61727, 63171, 64123, 64402, 66988, 68403, 70257, 71911, 72892, 73075, 73496, 74462, 75286, 76196, 77497, 79713, 79819, 79827, 80852, 81150, 81722, 81986, 83140, 85208, 85343, 85684, 86974, 87144, 89167, 90768, 93710, 93854, 94638, 94720, 96206, 97348, 97362, 97391, 97396, 99934])
+        (
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+             20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+            [1411, 1441, 1486, 2212, 2560, 4193, 7503, 8101, 8229, 9214, 10837,
+             11263, 12618, 13012, 13417, 15380, 15694, 16239, 16685, 17332,
+             17783, 18162, 18321, 19806, 20904, 23205, 23384, 24325, 25926,
+             26154, 29558, 29702, 31679, 31816, 34532, 39083, 40372, 40579,
+             40970, 41147, 41908, 42361, 43701, 44522, 48832, 50990, 52280,
+             53432, 53946, 54420, 54634, 55716, 56380, 57140, 58230, 58569,
+             59767, 60610, 61440, 61654, 61727, 63171, 64123, 64402, 66988,
+             68403, 70257, 71911, 72892, 73075, 73496, 74462, 75286, 76196,
+             77497, 79713, 79819, 79827, 80852, 81150, 81722, 81986, 83140,
+             85208, 85343, 85684, 86974, 87144, 89167, 90768, 93710, 93854,
+             94638, 94720, 96206, 97348, 97362, 97391, 97396, 99934])
 
     ]
     for i, case in enumerate(cases, 1):
         test_merge(*case)
         padding = len(str(len(cases)))
-        print(
-            f"merge test for case {i:{padding}}/{len(cases)} finished.", end='\r')
+        print(f"merge test for case {i:{padding}}/{len(cases)} finished.",
+              end='\r')
     print()
 
 
@@ -862,13 +883,12 @@ def split_test_with_cases():
     for i, case in enumerate(cases, 1):
         test_split(*case)
         padding = len(str(len(cases)))
-        print(
-            f"split test for case {i:{padding}}/{len(cases)} finished.", end='\r')
+        print(f"split test for case {i:{padding}}/{len(cases)} finished.",
+              end='\r')
     print()
 
 
 def split_random_test(how_many=1000):
-    import random
     cases = [
         (0, 100, 1000)
     ]
@@ -880,8 +900,8 @@ def split_random_test(how_many=1000):
             index = random.randint(- 2 * len(values), 2 * len(values))
             test_split(values, index)
             padding1, padding2 = len(str(how_many)), len(str(len(cases)))
-            print(
-                f"split random test {j:{padding1}}/{how_many} for case {i:{padding2}}/{len(cases)} finished.", end='\r')
+            print(f"split random test {j:{padding1}}/{how_many} "
+                  f"for case {i:{padding2}}/{len(cases)} finished.", end='\r')
     print()
 
 
@@ -908,13 +928,12 @@ def append_test_with_cases():
     for i, case in enumerate(cases, 1):
         test_append(case)
         padding = len(str(len(cases)))
-        print(
-            f"append test for case {i:{padding}}/{len(cases)} finished.", end='\r')
+        print(f"append test for case {i:{padding}}/{len(cases)} finished.",
+              end='\r')
     print()
 
 
 def append_random_test(how_many=1000):
-    import random
     cases = [
         (0, 100, 1000)
     ]
@@ -925,8 +944,8 @@ def append_random_test(how_many=1000):
                       for _ in range(num_amount)]
             test_append(values)
             padding1, padding2 = len(str(how_many)), len(str(len(cases)))
-            print(
-                f"append random test {j:{padding1}}/{how_many} for case {i:{padding2}}/{len(cases)} finished.", end='\r')
+            print(f"append random test {j:{padding1}}/{how_many} "
+                  f"for case {i:{padding2}}/{len(cases)} finished.", end='\r')
     print()
 
 
@@ -951,13 +970,12 @@ def index_test_with_cases():
     for i, case in enumerate(cases, 1):
         test_index(case)
         padding = len(str(len(cases)))
-        print(
-            f"index test for case {i:{padding}}/{len(cases)} finished.", end='\r')
+        print(f"index test for case {i:{padding}}/{len(cases)} finished.",
+              end='\r')
     print()
 
 
 def index_random_test(how_many=1000):
-    import random
     cases = [
         (0, 100, 1000)
     ]
@@ -968,8 +986,8 @@ def index_random_test(how_many=1000):
                       for _ in range(num_amount)]
             test_index(values)
             padding1, padding2 = len(str(how_many)), len(str(len(cases)))
-            print(
-                f"index random test {j:{padding1}}/{how_many} for case {i:{padding2}}/{len(cases)} finished.", end='\r')
+            print(f"index random test {j:{padding1}}/{how_many} "
+                  f"for case {i:{padding2}}/{len(cases)} finished.", end='\r')
     print()
 
 
@@ -1025,20 +1043,21 @@ def insert_test_with_special_cases():
         assert tree[res_index] == new_value
 
 
-def gen_cases_for_getitem_or_delitem(how_many=1000, keys_maxlen=5, values_maxlen=10, values_source=None):
-    import random
+def rnd_int(values_len):
+    return random.randint(- (2 * values_len + 1), 2 * values_len + 1)
 
-    def rnd_int(start=0):
-        return random.randint(- (2 * values_len + 1), 2 * values_len + 1)
 
-    def rnd_nonzero_int(start=0):
-        res = 0
-        while res == 0:
-            res = random.randint(- (2 * values_len + 1), 2 * values_len + 1)
-        return res
+def rnd_nonzero_int(values_len):
+    res = 0
+    while res == 0:
+        res = random.randint(- (2 * values_len + 1), 2 * values_len + 1)
+    return res
+
+
+def gen_cases_for_getitem_or_delitem(
+        how_many=1000, keys_maxlen=5, values_maxlen=10, values_source=None):
 
     if values_source is None:
-        import string
         values_source = string.ascii_lowercase
     values_source = sorted(set(values_source))
     if len(values_source) < values_maxlen:
@@ -1053,10 +1072,12 @@ def gen_cases_for_getitem_or_delitem(how_many=1000, keys_maxlen=5, values_maxlen
         for _ in range(keys_len):
             type_ = random.choice([int, slice])
             if isinstance(type_, int):
-                key = rnd_int()
+                key = rnd_int(values_len)
             else:
-                indices = [random.choice([None, rnd_int()]) for _ in range(2)]
-                indices.append(random.choice([None, rnd_nonzero_int()]))
+                indices = [random.choice([None, rnd_int(values_len)])
+                           for _ in range(2)]
+                indices.append(random.choice(
+                    [None, rnd_nonzero_int(values_len)]))
                 key = slice(*indices)
             keys.append(key)
         yield values, keys
@@ -1101,7 +1122,10 @@ getitem_n_delitem_cases = [
     (['a', 'b', 'c', 'd', 'e'], [slice(None, -3, -2)]),
     (['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], [slice(-2, 1, 11)]),
     (['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], [slice(-6, 8, None)]),
-    (['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], [slice(None, None, 5)]),
+    (
+        ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
+        [slice(None, None, 5)]
+    ),
 ]
 
 
@@ -1113,14 +1137,14 @@ def test_getitem(values, keys):
         expected_ex, expected_res = None, None
         try:
             expected_res = expected_vals[key]
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             expected_ex = e
         ex, res = None, None
         try:
             res = tree[key]
             if isinstance(res, SplayTree):
                 res = list(res)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             ex = e
         assert check_whether_tree_is_correct(tree)
         stmt = type(ex) is type(expected_ex) and res == expected_res
@@ -1131,17 +1155,20 @@ def getitem_test_with_cases():
     padding = len(str(len(getitem_n_delitem_cases)))
     for i, case in enumerate(getitem_n_delitem_cases, 1):
         test_getitem(*case)
-        print(
-            f"getitem test for case {i:{padding}}/{len(getitem_n_delitem_cases)} finished.", end='\r')
+        print(f"getitem test for case {i:{padding}}"
+              f"/{len(getitem_n_delitem_cases)} finished.", end='\r')
     print()
 
 
-def getitem_random_test(how_many=1000, keys_maxlen=5, values_maxlen=10, values_source=None):
+def getitem_random_test(
+        how_many=1000, keys_maxlen=5, values_maxlen=10, values_source=None):
     padding = len(str(how_many))
-    for i, case in enumerate(gen_cases_for_getitem_or_delitem(how_many, keys_maxlen, values_maxlen, values_source), 1):
+    for i, case in enumerate(
+            gen_cases_for_getitem_or_delitem(
+                how_many, keys_maxlen, values_maxlen, values_source), 1):
         test_getitem(*case)
-        print(
-            f"getitem random test {i:{padding}}/{how_many} finished.", end='\r')
+        print(f"getitem random test {i:{padding}}/{how_many} finished.",
+              end='\r')
     print()
 
 
@@ -1153,12 +1180,12 @@ def test_delitem(values, keys):
         expected_ex = None
         try:
             del expected_vals[key]
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             expected_ex = e
         ex = None
         try:
             del tree[key]
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             ex = e
         assert check_whether_tree_is_correct(tree)
         stmt = type(ex) is type(expected_ex) and list(tree) == expected_vals
@@ -1169,17 +1196,20 @@ def delitem_test_with_cases():
     padding = len(str(len(getitem_n_delitem_cases)))
     for i, case in enumerate(getitem_n_delitem_cases, 1):
         test_delitem(*case)
-        print(
-            f"delitem test for case {i:{padding}}/{len(getitem_n_delitem_cases)} finished.", end='\r')
+        print(f"delitem test for case {i:{padding}}"
+              f"/{len(getitem_n_delitem_cases)} finished.", end='\r')
     print()
 
 
-def delitem_random_test(how_many=1000, keys_maxlen=5, values_maxlen=10, values_source=None):
+def delitem_random_test(
+        how_many=1000, keys_maxlen=5, values_maxlen=10, values_source=None):
     padding = len(str(how_many))
-    for i, case in enumerate(gen_cases_for_getitem_or_delitem(how_many, keys_maxlen, values_maxlen, values_source), 1):
+    for i, case in enumerate(
+            gen_cases_for_getitem_or_delitem(
+                how_many, keys_maxlen, values_maxlen, values_source), 1):
         test_delitem(*case)
-        print(
-            f"delitem random test {i:{padding}}/{how_many} finished.", end='\r')
+        print(f"delitem random test {i:{padding}}/{how_many} finished.",
+              end='\r')
     print()
 
 
@@ -1188,27 +1218,29 @@ def test_setitem(values, key_and_value_to_set_pairs):
     assert check_whether_tree_is_correct(tree)
     expected_vals = list(values)
     for key, value in key_and_value_to_set_pairs:
-        eggs = False
+        not_iterable_value = False
         try:
-            it = iter(value)
+            val_it = iter(value)
         except TypeError:
-            eggs = True
-        if isinstance(key, int) or eggs:
+            not_iterable_value = True
+        if not_iterable_value or isinstance(key, int):
             list_value = value
             tree_value = value
         else:
-            list_value = list(it)
+            # val_it is bound because not_iterable_value is False
+            # only if iter() call was successful
+            list_value = list(val_it)
             tree_value = SplayTree(list_value)
             assert check_whether_tree_is_correct(tree_value)
         expected_ex = None
         try:
             expected_vals[key] = list_value
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             expected_ex = e
         ex = None
         try:
             tree[key] = tree_value
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             ex = e
         assert check_whether_tree_is_correct(tree)
         stmt = type(ex) is type(expected_ex) and list(tree) == expected_vals
@@ -1252,25 +1284,16 @@ def setitem_test_with_cases():
     padding = len(str(len(cases)))
     for i, case in enumerate(cases, 1):
         test_setitem(*case)
-        print(
-            f"setitem test for case {i:{padding}}/{len(cases)} finished.", end='\r')
+        print(f"setitem test for case {i:{padding}}/{len(cases)} finished.",
+              end='\r')
     print()
 
 
-def gen_cases_for_setitem(how_many=1000, key_and_value_to_set_pairs_maxlen=5, values_maxlen=10, values_source=None):
-    import random
-
-    def rnd_int(start=0):
-        return random.randint(- (2 * values_len + 1), 2 * values_len + 1)
-
-    def rnd_nonzero_int(start=0):
-        res = 0
-        while res == 0:
-            res = random.randint(- (2 * values_len + 1), 2 * values_len + 1)
-        return res
+def gen_cases_for_setitem(
+        how_many=1000, key_and_value_to_set_pairs_maxlen=5, values_maxlen=10,
+        values_source=None):
 
     if values_source is None:
-        import string
         values_source = string.ascii_lowercase
     values_source = sorted(set(values_source))
     if len(values_source) < values_maxlen:
@@ -1287,11 +1310,13 @@ def gen_cases_for_setitem(how_many=1000, key_and_value_to_set_pairs_maxlen=5, va
         for _ in range(key_and_value_to_set_pairs_len):
             type_ = random.choice([int, slice])
             if isinstance(type_, int):
-                key = rnd_int()
+                key = rnd_int(values_len)
                 value_to_set = values_left.pop(0)
             else:
-                indices = [random.choice([None, rnd_int()]) for _ in range(2)]
-                indices.append(random.choice([None, rnd_nonzero_int()]))
+                indices = [random.choice([None, rnd_int(values_len)])
+                           for _ in range(2)]
+                indices.append(random.choice(
+                    [None, rnd_nonzero_int(values_len)]))
                 key = slice(*indices)
                 value_to_set_len = random.randint(0, len(values_left))
                 value_to_set = values_left[:value_to_set_len]
@@ -1300,40 +1325,43 @@ def gen_cases_for_setitem(how_many=1000, key_and_value_to_set_pairs_maxlen=5, va
         yield values, key_and_value_to_set_pairs
 
 
-def setitem_random_test(how_many=1000, keys_maxlen=5, values_maxlen=10, values_source=None):
+def setitem_random_test(
+        how_many=1000, keys_maxlen=5, values_maxlen=10, values_source=None):
     padding = len(str(how_many))
-    for i, case in enumerate(gen_cases_for_setitem(how_many, keys_maxlen, values_maxlen, values_source), 1):
+    for i, case in enumerate(
+            gen_cases_for_setitem(
+                how_many, keys_maxlen, values_maxlen, values_source), 1):
         test_setitem(*case)
-        print(
-            f"setitem random test {i:{padding}}/{how_many} finished.", end='\r')
+        print(f"setitem random test {i:{padding}}/{how_many} finished.",
+              end='\r')
     print()
 
 
 if __name__ == "__main__":
-    main()
-    # test()
+    # main()
+    test()
     # time_test()
 
-    # index_test_with_cases()
-    # index_test_with_special_cases()
+    index_test_with_cases()
+    index_test_with_special_cases()
     # index_random_test()
 
-    # append_test_with_cases()
-    # append_random_test()
+    append_test_with_cases()
+    append_random_test()
 
-    # insert_test_with_special_cases()
+    insert_test_with_special_cases()
 
-    # merge_test_with_cases()
-    # merge_random_test()
+    merge_test_with_cases()
+    merge_random_test()
 
-    # split_test_with_cases()
-    # split_random_test()
+    split_test_with_cases()
+    split_random_test()
 
-    # getitem_test_with_cases()
-    # getitem_random_test()
+    getitem_test_with_cases()
+    getitem_random_test()
 
-    # delitem_test_with_cases()
-    # delitem_random_test()
+    delitem_test_with_cases()
+    delitem_random_test()
 
-    # setitem_test_with_cases()
-    # setitem_random_test()
+    setitem_test_with_cases()
+    setitem_random_test()
