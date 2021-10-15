@@ -2,26 +2,27 @@ import random
 import string
 import timeit
 from sys import stdin
+from typing import Any, Iterable, Iterator, Optional, Tuple, Union
 
 
 class Node:
-    def __init__(self, value):
+    def __init__(self, value: Any) -> None:
         self.value = value
-        self.parent = None
-        self.left = None
-        self.right = None
-        self.size = 1
+        self.parent: Union[Node, None] = None
+        self.left: Union[Node, None] = None
+        self.right: Union[Node, None] = None
+        self.size: int = 1
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}<{}, {}, has: parent {}, left {}, right {}>".format(
             self.__class__.__name__, repr(self.value), self.size,
             self.parent is not None,
             self.left is not None, self.right is not None)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{}({})".format(self.__class__.__name__, repr(self.value))
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return id(self)
 
 
@@ -51,8 +52,8 @@ class SplayTree:
     in the built-in list on average case with big input.
     """
 
-    def __init__(self, values=None):
-        self._root = None
+    def __init__(self, values: Optional[Iterable[Any]] = None) -> None:
+        self._root: Union[Node, None] = None
         if values is None:
             return
         last_node = None
@@ -68,15 +69,15 @@ class SplayTree:
                 self._splay(node)
             last_node = node
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}<root: {}, size: {}>".format(
             self.__class__.__name__, repr(self._root), self.__len__())
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{}({})".format(self.__class__.__name__, repr(self._root))
 
     @classmethod
-    def _from_root(cls, root):
+    def _from_root(cls, root: Union[Node, None]) -> 'SplayTree':
         """Return a tree builded from a given node considering as a tree root.
 
         The "parent" attribute of a given "root" must be None.
@@ -88,7 +89,7 @@ class SplayTree:
         return tree
 
     @staticmethod
-    def _update_attrs(*nodes):
+    def _update_attrs(*nodes: Union[Node, None]) -> None:
         """Update attributes given nodes using their direct children."""
         # Notice:
         # The method is in this class and not in class Node
@@ -104,7 +105,7 @@ class SplayTree:
             right_size = node.right.size if node.right is not None else 0
             node.size = left_size + right_size + 1
 
-    def _splay(self, node):
+    def _splay(self, node: Node) -> None:
         """Make the given "node" the tree root.
 
         The defining operation of a Splay tree.
@@ -227,21 +228,21 @@ class SplayTree:
         self._root = node
 
     @staticmethod
-    def _first(node):
+    def _first(node: Node) -> Node:
         prev, cur = node, node.left
         while cur is not None:
             prev, cur = cur, cur.left
         return prev
 
     @staticmethod
-    def _last(node):
+    def _last(node: Node) -> Node:
         prev, cur = node, node.right
         while cur is not None:
             prev, cur = cur, cur.right
         return prev
 
     @classmethod
-    def _prev(cls, node):
+    def _prev(cls, node: Node) -> Union[Node, None]:
         # go right and down in left subtree
         if node.left is not None:
             return cls._last(node.left)
@@ -252,7 +253,7 @@ class SplayTree:
         return cur if cur is not node else None
 
     @classmethod
-    def _next(cls, node):
+    def _next(cls, node: Node) -> Union[Node, None]:
         # go left and down in right subtree
         if node.right is not None:
             return cls._first(node.right)
@@ -262,7 +263,7 @@ class SplayTree:
             prev, cur = cur, cur.parent
         return cur if cur is not node else None
 
-    def _append(self, node):
+    def _append(self, node: Node) -> None:
         if self._root is None:
             self._root = node
             return
@@ -271,11 +272,11 @@ class SplayTree:
         node.parent = last_node
         self._splay(node)
 
-    def append(self, value):
+    def append(self, value: Any) -> None:
         self._append(Node(value))
 
     @staticmethod
-    def _order_statistics(node, key):
+    def _order_statistics(node: Node, key: int) -> Union[Node, None]:
         """Find the k-order statistics. Numbering starts with one."""
         if key < 1:
             raise ValueError(
@@ -291,7 +292,7 @@ class SplayTree:
                 key -= left_size + 1
         return None
 
-    def _insert_before(self, node, new_node):
+    def _insert_before(self, node: Node, new_node: Node) -> None:
         prev_node = self._prev(node)
         if prev_node is None:
             node.left = new_node
@@ -306,7 +307,7 @@ class SplayTree:
         self._update_attrs(new_node, prev_node, node)
         self._splay(new_node)
 
-    def _insert(self, index, node):
+    def _insert(self, index: int, node: Node) -> None:
         if self._root is None:
             self._root = node
             return
@@ -320,13 +321,18 @@ class SplayTree:
         cur_by_ind = self._order_statistics(self._root, index + 1)
         self._insert_before(cur_by_ind, node)
 
-    def insert(self, index, value):
+    def insert(self, index: int, value: Any) -> None:
         """Insert object before index.
 
         Behaves like built-in list.insert."""
         self._insert(index, Node(value))
 
-    def index(self, value, start=0, stop=9223372036854775807):
+    def index(
+            self,
+            value: Any,
+            start: int = 0,
+            stop: int = 9223372036854775807
+    ) -> int:
         """Return first index of value.
 
         Raises ValueError if the value is not present.
@@ -359,7 +365,11 @@ class SplayTree:
         raise ValueError(f"{value} is not in {self.__class__.__name__}")
 
     @classmethod
-    def _merge(cls, left_root, right_root):
+    def _merge(
+            cls,
+            left_root: Union[Node, None],
+            right_root: Union[Node, None]
+    ) -> Union[Node, None]:
         if left_root is None and right_root is None:
             return None
         elif left_root is None:
@@ -375,10 +385,10 @@ class SplayTree:
         return new_root
 
     @classmethod
-    def merge(cls, tree1, tree2):
+    def merge(cls, tree1: 'SplayTree', tree2: 'SplayTree') -> 'SplayTree':
         return cls._from_root(cls._merge(tree1._root, tree2._root))
 
-    def _delete(self, node):
+    def _delete(self, node: Node) -> None:
         self._splay(node)
         if node.left is not None:
             node.left.parent = None
@@ -387,7 +397,11 @@ class SplayTree:
         self._root = self._merge(node.left, node.right)
 
     @classmethod
-    def _split(cls, root, key):
+    def _split(
+            cls,
+            root: Union[Node, None],
+            key: int
+    ) -> Tuple[Union[Node, None], Union[Node, None]]:
         """Return root[0:key], root[key:]"""
         if root is None:
             return None, None
@@ -407,71 +421,88 @@ class SplayTree:
         return old_node_left, node
 
     @classmethod
-    def split(cls, tree, index):
+    def split(
+            cls,
+            tree: 'SplayTree',
+            index: int
+    ) -> Tuple['SplayTree', 'SplayTree']:
         """Split given "tree" into two trees by given "index".
         Values starting with given index will be in second tree."""
         left_root, right_root = cls._split(tree._root, key=index)
         return cls._from_root(left_root), cls._from_root(right_root)
 
-    def _in_order_iter(self, start_node=None, end_node=None, root_node=None):
-        """Return in-order iterator of tree nodes from start_node
-        to end_node including both. "root_node" limits iteration
+    def _in_order_iter(
+            self,
+            start: Optional[Node] = None,
+            end: Optional[Node] = None,
+            root: Optional[Node] = None
+    ) -> Iterator[Node]:
+        """Return in-order iterator of tree nodes from "start"
+        to "end" including both. "root" limits iteration
         with subtree in given node.
         """
-        cur = root_node if root_node is not None else self._root
+        cur = root if root is not None else self._root
         if cur is None:
             return
         visited = set()
         while True:
             if (cur.left is not None and cur.left not in visited and
-                    cur is not start_node):
+                    cur is not start):
                 cur = cur.left
             else:
                 if cur not in visited:
                     yield cur
                     visited.add(cur)
                 if (cur.right is not None and cur.right not in visited and
-                        cur is not end_node):
+                        cur is not end):
                     cur = cur.right
                 elif cur.parent is not None:
                     visited.discard(cur.left)
                     visited.discard(cur.right)
-                    if cur is root_node:
+                    if cur is root:
                         return
                     cur = cur.parent
                 else:
                     return
 
     def _reversed_in_order_iter(
-            self, start_node=None, end_node=None, root_node=None):
-        cur = root_node if root_node is not None else self._root
+            self,
+            start: Optional[Node] = None,
+            end: Optional[Node] = None,
+            root: Optional[Node] = None
+    ) -> Iterator[Node]:
+        """Return reversed in-order iterator of tree nodes from "start"
+        to "end" including both. "root" limits iteration
+        with subtree in given node.
+        """
+        cur = root if root is not None else self._root
         if cur is None:
             return
         visited = set()
         while True:
             if (cur.right is not None and cur.right not in visited and
-                    cur is not start_node):
+                    cur is not start):
                 cur = cur.right
             else:
                 if cur not in visited:
                     yield cur
                     visited.add(cur)
                 if (cur.left is not None and cur.left not in visited and
-                        cur is not end_node):
+                        cur is not end):
                     cur = cur.left
                 elif cur.parent is not None:
                     visited.discard(cur.right)
                     visited.discard(cur.left)
-                    if cur is root_node:
+                    if cur is root:
                         return
                     cur = cur.parent
                 else:
                     return
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._root.size if self._root is not None else 0
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Union[int, slice]) -> Union['SplayTree', Any]:
         if isinstance(key, int):
             if self._root is None:
                 raise IndexError
@@ -517,7 +548,7 @@ class SplayTree:
         else:
             raise TypeError
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: Union[int, slice]) -> None:
         if isinstance(key, int):
             if self._root is None:
                 raise IndexError
@@ -567,7 +598,11 @@ class SplayTree:
         else:
             raise TypeError
 
-    def __setitem__(self, key, value):
+    def __setitem__(
+            self,
+            key: Union[int, slice],
+            value: Union[Iterable[Any], Any]
+    ) -> None:
         if isinstance(key, int):
             if self._root is None:
                 raise IndexError
@@ -652,13 +687,16 @@ class SplayTree:
         else:
             raise TypeError
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         return (node.value for node in self._in_order_iter())
 
-    def __reversed__(self):
+    def __reversed__(self) -> Iterator[Any]:
         return (node.value for node in self._reversed_in_order_iter())
 
-    def _split_into_three_subtrees(self, slice_):
+    def _split_into_three_subtrees(
+            self,
+            slice_: slice
+    ) -> Tuple[Node, Node, Node]:
         indices = slice_.indices(self.__len__())
         start, stop, step = indices
         if start > stop and step < 0:
@@ -675,7 +713,13 @@ class SplayTree:
         requested, right = self._split(temp, len_)
         return left, requested, right
 
-    def slices_substitution(self, src_start, src_stop, dest_start, dest_stop):
+    def slices_substitution(
+            self,
+            src_start: int,
+            src_stop: int,
+            dest_start: int,
+            dest_stop: int
+    ) -> None:
         left, source, right = self._split_into_three_subtrees(
             slice(src_start, src_stop, 1))
         self._root = self._merge(left, right)
@@ -688,7 +732,7 @@ class SplayTree:
         self._root = self._merge(left, temp)
 
 
-def check_whether_tree_is_correct(tree):
+def check_whether_tree_is_correct(tree: SplayTree):
     def check_size(node):
         left_size = node.left.size if node.left is not None else 0
         right_size = node.right.size if node.right is not None else 0
